@@ -1,32 +1,82 @@
-import { Component } from '@angular/core';
-import { HttpClient } from '@angular/common/http';
+import { Component, OnInit } from '@angular/core';
+import { ActivatedRoute } from '@angular/router';
+import { FormGroup, FormBuilder, Validators } from '@angular/forms';
+import { UserService } from '../user.service';
 
 @Component({
   selector: 'app-update-user',
   templateUrl: './update-user.component.html',
   styleUrls: ['./update-user.component.css']
 })
-export class UpdateUserComponent {
-  users: any[] = []; // Array to store the fetched users
+export class UpdateUserComponent implements OnInit {
+  userId: number = 0; // Declare and initialize the userId variable
 
-  constructor(private http: HttpClient) {}
+  userForm: FormGroup;
 
-  fetchUsers() {
-    // Make an HTTP GET request to retrieve the list of users
-    // Example: this.http.get('/api/users').subscribe(
-    //   users => {
-    //     this.users = users; // Assign the fetched users to the component property
-    //   },
-    //   error => {
-    //     // Handle any errors
-    //   }
-    // );
+  constructor(
+    private route: ActivatedRoute,
+    private formBuilder: FormBuilder,
+    private userService: UserService
+  ) {
+    this.userId = 0; // Initialize with a default value
+    this.userForm = this.formBuilder.group({
+      firstName: ['', Validators.required],
+      lastName: ['', Validators.required],
+      email: ['', [Validators.required, Validators.email]],
+      password: ['', Validators.required]
+    });
+  }
 
-    // For demonstration purposes, assign dummy data to the users array
-    this.users = [
-      { id: 1, firstName: 'John', lastName: 'Doe' },
-      { id: 2, firstName: 'Jane', lastName: 'Smith' },
-      // Add more user objects as needed
-    ];
+  ngOnInit() {
+    const id = this.route.snapshot.paramMap.get('id');
+    this.userId = id ? +id : 0;
+    this.initUserForm();
+    this.loadUserData();
+  }
+
+  initUserForm() {
+    this.userForm = this.formBuilder.group({
+      firstName: ['', Validators.required],
+      lastName: ['', Validators.required],
+      email: ['', [Validators.required, Validators.email]],
+      password: ['', Validators.required]
+    });
+  }
+
+  loadUserData() {
+    this.userService.getUserById(this.userId).subscribe(
+      (user: any) => {
+        this.userForm.patchValue({
+          firstName: user.firstName,
+          lastName: user.lastName,
+          email: user.email,
+          password: user.password
+        });
+      },
+      (error: any) => {
+        console.error('Error loading user:', error);
+      }
+    );
+  }
+
+  onSubmit() {
+    if (this.userForm.invalid) {
+      return;
+    }
+
+    const updatedUser = {
+      id: this.userId,
+      ...this.userForm.value
+    };
+
+    this.userService.updateUser(this.userId, updatedUser).subscribe(
+      () => {
+        console.log('User updated successfully');
+        // Perform any necessary actions after updating the user
+      },
+      (error: any) => {
+        console.error('Error updating user:', error);
+      }
+    );
   }
 }
